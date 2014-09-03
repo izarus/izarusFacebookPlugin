@@ -1,13 +1,7 @@
 all:
   facebook:
-    app_id:         XXX
-    app_secret:     XXX
-    after_signin_url:           '@panel'
-    after_signout_url:          '@homepage'
-    connect_signin_url:         'sfFacebookAuth/signin'
-
-    model_class:                sfGuardUser
-    model_id_column:            id
-    model_facebook_uid_column:  facebook_uid ## BIGNINT
-    model_email_column:         email_address
-    model_email_hash:           email_address_hash
+    app_id:             XXX
+    app_secret:         XXX
+    after_signin_url:   '@homepage'
+    after_connect_url:  '@homepage'
+    guard_uid_column:   facebook_uid

@@ -8,52 +8,55 @@ class BasesfFacebookAuthActions extends sfActions
     if (!$facebook->getUser()) {
       return $this->redirect($facebook->getLoginUrl());
     } else {
-      $guard_user = $facebook->findUserByEmail();
-      if ($guard_user) {
-        $this->getUser()->signIn($guard_user);
-      } else {
 
-        $conn = Doctrine_Manager::connection();
-        try {
-          $conn->beginTransaction();
+      $profile = $facebook->getUserProfile();
 
-          $profile = $facebook->getUserProfile();
-          $genero = NULL;
-          if ($profile['gender']=='male') $genero = 'Masculino';
-            elseif($profile['gender']=='female') $genero = 'Femenino';
+      $user = sfGuardUserTable::getInstance()->findOneBy(sfConfig::get('app_facebook_guard_uid_column','facebook_uid'),$profile['id']);
+      if (!$user) $user = sfGuardUserTable::getInstance()->findOneBy('email_address',$profile['email']);
 
-          $guard_user = new sfGuardUser();
-          $guard_user->setEmailAddress($profile['email']);
-          //$guard_user->setFacebookUid($profile['id']);
-          $guard_user->setFirstName($profile['first_name']);
-          $guard_user->setLastName($profile['last_name']);
-          $guard_user->setGenero($genero);
-          $guard_user->save();
-
-          $postulante = new Postulante();
-          $postulante->setUsuarioId($guard_user->getId());
-          $postulante->save();
-
-          $conn->commit();
-
-          $this->getUser()->signIn($guard_user);
-
-        } catch (Exception $e) {
-          $conn->rollback();
-          $this->logMessage('Fail to create user based on Facebook email: '.$e->getMessage(),'err');
-        }
+      if (!$user) {
+        $user = new sfGuardUser();
+        $user->setEmailAddress($profile['email']);
+        $user->setFirstName($profile['first_name']);
+        $user->setLastName($profile['last_name']);
+        $user->set(sfConfig::get('app_facebook_guard_uid_column','facebook_uid'),$profile['id']);
+        $user->save();
       }
+
+      $this->getUser()->signIn($user);
       return $this->redirect(sfConfig::get('app_facebook_after_signin_url','@homepage'));
     }
   }
 
-  public function executeSignout()
+  public function executeConnect()
   {
+    $this->forward404Unless($this->getUser()->isAuthenticated());
+
     $facebook = new sfFacebook();
-    if ($facebook->getUser()) {
-      return $this->redirect($facebook->getLogoutUrl());
+    if (!$facebook->getUser()) {
+      return $this->redirect($facebook->getLoginUrl());
     } else {
-      return $this->redirect(sfConfig::get('app_facebook_after_signout_url','@homepage'));
+
+      $profile = $facebook->getUserProfile();
+
+      // Check si otro usuario usa la cuenta facebook
+      $other_user = sfGuardUserTable::getInstance()->findOneBy(sfConfig::get('app_facebook_guard_uid_column','facebook_uid'),$profile['id']);
+      if ($other_user && $other_user->getId() != $this->getUser()->getGuardUser()->getId()){
+        throw new Exception("Error. Otro usuario ya tiene asociado esta cuenta Facebook.");
+      }
+
+      // Check si otro usuario usa el mismo email
+      $other_user = sfGuardUserTable::getInstance()->findOneBy('email_address',$profile['email']);
+      if ($other_user && $other_user->getId() != $this->getUser()->getGuardUser()->getId()){
+        throw new Exception("Error. Otro usuario ya tiene asociado el email de la cuenta Facebook.");
+      }
+
+      // Conecta cuenta Facebook con usuario logeado
+      $user = $this->getUser()->getGuardUser();
+      $user->set(sfConfig::get('app_facebook_guard_uid_column','facebook_uid'),$profile['id']);
+      $user->save();
+
+      return $this->redirect(sfConfig::get('app_facebook_after_signin_url','@homepage'));
     }
   }
 }

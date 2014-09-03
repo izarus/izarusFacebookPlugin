@@ -41,15 +41,4 @@ class sfFacebook
   public function getUserProfile() {
     return $this->profile;
   }
-
-  public function findUserByEmail() {
-    $table = sfConfig::get('app_facebook_model_class','sfGuardUser').'Table';
-    $email_column = sfConfig::get('app_facebook_model_email_column','email_address');
-
-    if ($this->profile) {
-      return $table::getInstance()->findOneBy($email_column,$this->profile['email']);
-    } else {
-      return null;
-    }
-  }
 }
