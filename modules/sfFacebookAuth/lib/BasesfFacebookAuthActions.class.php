@@ -4,6 +4,10 @@ class BasesfFacebookAuthActions extends sfActions
 {
   public function executeSignin(sfWebRequest $request)
   {
+    if ($request->getParameter('redirect')) {
+      $this->getUser()->setFlash('redirect',$request->getParameter('redirect'));
+    }
+
     $facebook = new sfFacebook();
     if (!$facebook->getUser()) {
       return $this->redirect($facebook->getLoginUrl());
@@ -24,7 +28,12 @@ class BasesfFacebookAuthActions extends sfActions
       }
 
       $this->getUser()->signIn($user);
-      return $this->redirect(sfConfig::get('app_facebook_after_signin_url','@homepage'));
+
+      if ($this->getUser()->hasFlash('redirect')) {
+        return $this->redirect($this->getUser()->getFlash('redirect'));
+      } else {
+        return $this->redirect(sfConfig::get('app_facebook_after_signin_url','@homepage'));
+      }
     }
   }
 
