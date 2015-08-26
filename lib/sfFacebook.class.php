@@ -17,7 +17,7 @@ class sfFacebook
     $this->user = $this->facebook->getUser();
     if ($this->user){
       try {
-        $this->profile = $this->facebook->api('/me');
+        $this->profile = $this->facebook->api('/me?fields=id,name,email,first_name,last_name','GET');
       } catch (FacebookApiException $e) {
         $this->user = NULL;
       }
